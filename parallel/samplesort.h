@@ -10,6 +10,6 @@
 #define FROM_MASTER 1          /* setting a message type */
 #define FROM_WORKER 2          /* setting a message type */
 
-
+int cmpfunc (const void * a, const void * b);
 
 #endif
