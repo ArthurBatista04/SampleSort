@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
 		size;
 	int opt, rc;
 	int **local_buckets, **global_buckets;
-	int *vector, *sample_vec, *local_splitter, *global_splitter;
+	int *vector, *sample_vec, *local_splitter, *global_splitter, *output;
 	int *local_bucket_sizes, *global_bucket_buffer_sizes, *displ, *global_bucket_sizes;
 	int local_splitter_element_size, global_splitter_size;
 	int count;
@@ -94,9 +94,10 @@ int main(int argc, char *argv[])
 	MPI_Bcast(&size, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
 
 	// initiliazations
+	output = (int *)calloc(size, sizeof(int));
 	sample_vec_size = size / num_tasks;
 	sample_vec = (int *)calloc(sample_vec_size, sizeof(int));
-	
+
 	local_splitter_element_size = num_tasks - 1;
 	local_splitter = (int *)calloc(local_splitter_element_size, sizeof(int));
 
@@ -191,18 +192,32 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
-	// global_bucket_sizes = (int *)calloc(global_splitter_size, sizeof(int));
-	// MPI_Reduce(local_bucket_sizes, global_bucket_sizes, global_splitter_size, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-	// if (task_id == MASTER)
-	// {
-	// 	printf("ROOT\n");
-	// 	for (int i = 0; i < global_bucket_sizes[0]; i++)
-	// 	{
-	// 		printf("%d ", global_buckets[0][i]);
-	// 	}
-	// 	printf("\n");
-	// }
+	global_bucket_sizes = (int *)calloc(num_tasks, sizeof(int));
+	MPI_Reduce(local_bucket_sizes, global_bucket_sizes, num_tasks, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+	if (task_id == MASTER)
+	{
+		int count = 0;
+		for (int i = 0; i < num_tasks; i++)
+		{
+			qsort(global_buckets[i], global_bucket_sizes[i], sizeof(int), cmpfunc);
+		}
 
+		for (int i = 0; i < num_tasks; i++)
+		{
+			for (int j = 0; j < global_bucket_sizes[i]; j++)
+			{
+				output[count + j] = global_buckets[i][j];
+			}
+			count += global_bucket_sizes[i];
+		}
+
+		printf("ROOT\n");
+		for (int i = 0; i < count; i++)
+		{
+			printf("%d ", output[i]);
+		}
+		printf("\n");
+	}
 	MPI_Finalize();
 	return 0;
 }
