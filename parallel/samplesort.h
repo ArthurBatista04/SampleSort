@@ -7,12 +7,13 @@
 #include <time.h>
 #include <limits.h>
 #include <unistd.h>
-#define MASTER 0               /* taskid of first task */
-#define FROM_MASTER 1          /* setting a message type */
-#define FROM_WORKER 2          /* setting a message type */
+#define MASTER 0	  /* taskid of first task */
+#define FROM_MASTER 1 /* setting a message type */
+#define FROM_WORKER 2 /* setting a message type */
 #define TRUE 1
 #define FALSE 0
 
-int cmpfunc (const void * a, const void * b);
+int cmpfunc(const void *a, const void *b);
+int *init_vector(int size);
 
 #endif
