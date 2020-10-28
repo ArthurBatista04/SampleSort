@@ -41,9 +41,10 @@ int main(int argc, char *argv[])
 		size;
 	int opt, rc;
 	int **local_buckets, **global_buckets;
-	int *vector, *sample_vec, *local_splitter, *global_splitter, *output;
+	int *vector, *sample_vec, *local_splitter, *global_splitter, *splitter_buffer, *output;
 	int *local_bucket_sizes, *global_bucket_buffer_sizes, *displ, *global_bucket_sizes;
-	int local_splitter_element_size, global_splitter_size;
+	int local_splitter_element_size, global_splitter_size, splitter_buffer_size;
+	int print = FALSE;
 	int count;
 	time_t t;
 	MPI_Status status;
@@ -62,7 +63,7 @@ int main(int argc, char *argv[])
 	if (task_id == MASTER)
 	{
 
-		while ((opt = getopt(argc, argv, "s:h")) != -1)
+		while ((opt = getopt(argc, argv, "s:hp")) != -1)
 		{
 			switch (opt)
 			{
@@ -72,20 +73,26 @@ int main(int argc, char *argv[])
 				{
 
 					printf("Number of elements are not divisible by number of processes \n");
-					MPI_Finalize();
+					MPI_Abort(MPI_COMM_WORLD, rc);
 					exit(0);
 				}
 				break;
 			case 'h':
-				printf("Usage: mpirun %s -np (nº processes) -s (size input) -h (help) \n", argv[0]);
-				MPI_Finalize();
+				printf("Usage: mpirun %s -np (nº processes) -s (size input) -h (help) -p (print result) \n", argv[0]);
+				MPI_Abort(MPI_COMM_WORLD, rc);
 				exit(EXIT_SUCCESS);
+				break;
+			case 'p':
+				print = TRUE;
+				break;
 			case '?':
-				MPI_Finalize();
+				MPI_Abort(MPI_COMM_WORLD, rc);
 				exit(EXIT_FAILURE);
+				break;
 			default:
-				MPI_Finalize();
+				MPI_Abort(MPI_COMM_WORLD, rc);
 				abort();
+				break;
 			}
 		}
 		vector = init_vector(size);
@@ -101,8 +108,11 @@ int main(int argc, char *argv[])
 	local_splitter_element_size = num_tasks - 1;
 	local_splitter = (int *)calloc(local_splitter_element_size, sizeof(int));
 
-	global_splitter_size = local_splitter_element_size * num_tasks;
+	global_splitter_size = num_tasks;
 	global_splitter = (int *)calloc(global_splitter_size, sizeof(int));
+
+	splitter_buffer_size = local_splitter_element_size * num_tasks;
+	splitter_buffer = (int *)calloc(splitter_buffer_size, sizeof(int));
 
 	local_buckets = (int **)malloc(sizeof(int *) * global_splitter_size);
 	for (int i = 0; i < global_splitter_size; i++)
@@ -134,12 +144,18 @@ int main(int argc, char *argv[])
 	}
 
 	// gathering each local splitter into a global one
-	MPI_Gather(local_splitter, local_splitter_element_size, MPI_INT, global_splitter, local_splitter_element_size,
+	MPI_Gather(local_splitter, local_splitter_element_size, MPI_INT, splitter_buffer, local_splitter_element_size,
 			   MPI_INT, MASTER, MPI_COMM_WORLD);
 	if (task_id == MASTER)
 	{
+		qsort(splitter_buffer, splitter_buffer_size, sizeof(int), cmpfunc);
+
+		for (int i = 1; i < num_tasks; i++)
+		{
+			global_splitter[i - 1] = splitter_buffer[i * (num_tasks - 1)];
+		}
+
 		global_splitter[global_splitter_size - 1] = INT_MAX; // make sure last element is greater than any one for a guaranteed bucket allocation
-		qsort(global_splitter, global_splitter_size, sizeof(int), cmpfunc);
 	}
 
 	// after sorting global splitter send it to processes
@@ -160,13 +176,6 @@ int main(int argc, char *argv[])
 			count++;
 		}
 	}
-
-	// printf("PROCESS %d\n", task_id);
-	// for (int i = 0; i < local_bucket_sizes[0]; i++)
-	// {
-	// 	printf("%d ", local_buckets[0][i]);
-	// }
-	// printf("\n");
 
 	// gathering local buckets and there sizes at root process
 	for (int i = 0; i < global_splitter_size; i++)
@@ -193,6 +202,7 @@ int main(int argc, char *argv[])
 		}
 	}
 	global_bucket_sizes = (int *)calloc(num_tasks, sizeof(int));
+
 	MPI_Reduce(local_bucket_sizes, global_bucket_sizes, num_tasks, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 	if (task_id == MASTER)
 	{
@@ -201,22 +211,32 @@ int main(int argc, char *argv[])
 		{
 			qsort(global_buckets[i], global_bucket_sizes[i], sizeof(int), cmpfunc);
 		}
-
-		for (int i = 0; i < num_tasks; i++)
+		if (print)
 		{
-			for (int j = 0; j < global_bucket_sizes[i]; j++)
+
+			for (int i = 0; i < num_tasks; i++)
 			{
-				output[count + j] = global_buckets[i][j];
+				for (int j = 0; j < global_bucket_sizes[i]; j++)
+				{
+					output[count + j] = global_buckets[i][j];
+				}
+				count += global_bucket_sizes[i];
 			}
-			count += global_bucket_sizes[i];
-		}
 
-		printf("ROOT\n");
-		for (int i = 0; i < count; i++)
-		{
-			printf("%d ", output[i]);
+			printf("INICIAL VECTOR\n");
+			for (int i = 0; i < size; i++)
+			{
+				printf("%d ", vector[i]);
+			}
+			printf("\n\n\n");
+
+			printf("SORTED RESULT\n");
+			for (int i = 0; i < size; i++)
+			{
+				printf("%d ", output[i]);
+			}
+			printf("\n\n\n");
 		}
-		printf("\n");
 	}
 	MPI_Finalize();
 	return 0;
