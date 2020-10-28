@@ -9,26 +9,11 @@ int *init_vector(int size)
 {
 	int count = 0;
 	int *vector = (int *)calloc(size, sizeof(int));
-	srand(time(NULL));
-
-	while (count < size)
+	for (int i = size; i >= 0; i--)
 	{
-		int random_number = rand() % size + 1;
-		int repeated = FALSE;
-		for (int i = 0; i < size; i++)
-		{
-			if (vector[i] == random_number)
-			{
-				repeated = TRUE;
-			}
-		}
-		if (!repeated)
-		{
-			vector[count] = random_number;
-
-			count++;
-		}
+		vector[count++] = i;
 	}
+
 	return vector;
 }
 
@@ -96,7 +81,7 @@ int main(int argc, char *argv[])
 			}
 		}
 		vector = init_vector(size);
-	}
+		}
 
 	MPI_Bcast(&size, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
 
@@ -177,7 +162,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	// gathering local buckets and there sizes at root process
+	//gathering local buckets and there sizes at root process
 	for (int i = 0; i < global_splitter_size; i++)
 	{
 		MPI_Gather(&local_bucket_sizes[i], 1, MPI_INT, global_bucket_buffer_sizes, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
