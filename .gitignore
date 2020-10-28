@@ -50,3 +50,7 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+*.o
+par_sample_sort
+seq_sample_sort
