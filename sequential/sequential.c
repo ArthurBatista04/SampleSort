@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
 			num_tasks = atoi(optarg);
 			break;
 		case 'h':
-			printf("Usage: mpirun %s -np (nº processes) -s (size input) -h (help) -p (print result) \n", argv[0]);
+			printf("Usage: %s -n (nº processes) -s (size input) -h (help) -p (print result) \n", argv[0]);
 
 			exit(EXIT_SUCCESS);
 			break;
