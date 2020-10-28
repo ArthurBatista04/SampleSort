@@ -9,26 +9,11 @@ int *init_vector(int size)
 {
 	int count = 0;
 	int *vector = (int *)calloc(size, sizeof(int));
-	srand(time(NULL));
-
-	while (count < size)
+	for (int i = size; i >= 0; i--)
 	{
-		int random_number = rand() % size + 1;
-		int repeated = FALSE;
-		for (int i = 0; i < size; i++)
-		{
-			if (vector[i] == random_number)
-			{
-				repeated = TRUE;
-			}
-		}
-		if (!repeated)
-		{
-			vector[count] = random_number;
-
-			count++;
-		}
+		vector[count++] = i;
 	}
+
 	return vector;
 }
 
@@ -277,5 +262,4 @@ int main(int argc, char *argv[])
 		}
 		printf("\n\n\n");
 	}
-
 }
