@@ -11,7 +11,7 @@ run(){
 		do
 			for processes in 2 4 8 16
 				do
-					echo "Running sequential algorithm with $processes partations... Input file = $input"
+					echo "Running sequential algorithm with $processes partations... Input size = $input"
 					START=$(date +%s.%N)
 					for ((i=1;i<=times;i++)); do
 						$SEQUENTIAL_FILE -s $input -n $processes
@@ -20,7 +20,7 @@ run(){
 					TIME_SEQ=$(python3 -c "print('{:.2f}'.format(${END} - ${START}))")
 					echo "It took $TIME_SEQ seconds to run as input of size $input sequentially with $processes partations"
 			
-					echo "Running paralell algorithm with $processes processes... Input file = $input"
+					echo "Running paralell algorithm with $processes processes... Input size = $input"
 					START=$(date +%s.%N)
 					for ((i=1;i<=times;i++)); do
 						mpirun --host arthur:$processes $PARALLEL_FILE -s $input
