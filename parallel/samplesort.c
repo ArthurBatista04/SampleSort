@@ -27,6 +27,7 @@ int main(int argc, char *argv[])
 	int opt, rc;
 	int **local_buckets, **global_buckets;
 	int *vector, *sample_vec, *local_splitter, *global_splitter, *splitter_buffer, *output;
+	int *local_ordered_bucket;
 	int *local_bucket_sizes, *global_bucket_buffer_sizes, *displ, *global_bucket_sizes;
 	int local_splitter_element_size, global_splitter_size, splitter_buffer_size;
 	int print = FALSE;
@@ -81,7 +82,7 @@ int main(int argc, char *argv[])
 			}
 		}
 		vector = init_vector(size);
-		}
+	}
 
 	MPI_Bcast(&size, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
 
@@ -186,16 +187,44 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
+
 	global_bucket_sizes = (int *)calloc(num_tasks, sizeof(int));
 
 	MPI_Reduce(local_bucket_sizes, global_bucket_sizes, num_tasks, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+
+	MPI_Bcast(global_bucket_sizes, num_tasks, MPI_INT, MASTER, MPI_COMM_WORLD);
+
+	local_ordered_bucket = (int *)malloc(sizeof(int) * global_bucket_sizes[task_id]);
+
+	if (task_id == MASTER)
+	{
+		for (int i = 1; i < num_tasks; i++)
+		{
+			MPI_Send(global_buckets[i], global_bucket_sizes[i], MPI_INT, i, i, MPI_COMM_WORLD);
+		}
+		qsort(global_buckets[MASTER], global_bucket_sizes[MASTER], sizeof(int), cmpfunc);
+	}
+	if (task_id > MASTER)
+	{
+
+		MPI_Recv(local_ordered_bucket, global_bucket_sizes[task_id], MPI_INT, MASTER, task_id, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		qsort(local_ordered_bucket, global_bucket_sizes[task_id], sizeof(int), cmpfunc);
+
+		MPI_Send(local_ordered_bucket, global_bucket_sizes[task_id], MPI_INT, MASTER, task_id, MPI_COMM_WORLD);
+	}
+
+	if (task_id == 0)
+	{
+		for (int i = 1; i < num_tasks; i++)
+		{
+
+			MPI_Recv(global_buckets[i], global_bucket_sizes[i], MPI_INT, i, i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		}
+	}
+
 	if (task_id == MASTER)
 	{
 		int count = 0;
-		for (int i = 0; i < num_tasks; i++)
-		{
-			qsort(global_buckets[i], global_bucket_sizes[i], sizeof(int), cmpfunc);
-		}
 		if (print)
 		{
 
