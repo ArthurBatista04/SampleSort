@@ -1,10 +1,11 @@
 #ifndef SEQUENTIAL_ALGORITHM_H
 #define SEQUENTIAL_ALGORITHM_H
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 #include <time.h>
-#include <limits.h>
 #include <unistd.h>
 
 #define TRUE 1
