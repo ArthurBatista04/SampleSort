@@ -6,29 +6,50 @@ small=33554432
 medium=67108864
 big=134217728
 
+sequential_times=()
+sequential_time=0
+parallel_times=()
+parallel_time=0
+
 run() {
-	for input in $small $medium $big; do
+	for input in $small $medium ; do
 
 		echo "Running sequential algorithm with 4 partations... Input size = $input"
-		START=$(date +%s.%N)
 		for ((i = 1; i <= times; i++)); do
+			START=$(date +%s.%N)
 			$SEQUENTIAL_FILE -s $input -n 4
+			END=$(date +%s.%N)
+			TIME_SEQ=$(python3 -c "print('{:.2f}'.format(${END} - ${START}))")
+			sequential_times[$i]=$TIME_SEQ
 		done
-		END=$(date +%s.%N)
-		TIME_SEQ=$(python3 -c "print('{:.2f}'.format(${END} - ${START}))")
-		echo "It took $TIME_SEQ seconds to run as input of size $input sequentially with 4 partations"
-
-		echo "Running paralell algorithm with 4 processes... Input size = $input"
-		START=$(date +%s.%N)
+		
 		for ((i = 1; i <= times; i++)); do
-			mpirun -np 4 $PARALLEL_FILE -s $input
+			sequential_time=$(python3 -c "print('{:.2f}'.format(${sequential_time} + ${sequential_times[$i]}))")
 		done
-		END=$(date +%s.%N)
-		TIME_PAR=$(python3 -c "print('{:.2f}'.format(${END} - ${START}))")
-		echo "It took $TIME_PAR seconds to run $input paralelly with 4 processes"
-		SPEEDUP=$(python3 -c "print('{:.2f}'.format(${TIME_SEQ} / ${TIME_PAR}))")
+		sequential_time=$(python3 -c "print('{:.2f}'.format(${sequential_time} / ${times}))")
+		
+		echo "It took in average of $sequential_time seconds to run $input paralelly with 4 processes"
+		echo "Running paralell algorithm with 4 processes... Input size = $input"
+		for ((i = 1; i <= times; i++)); do
+			START=$(date +%s.%N)
+			mpirun -np 4 $PARALLEL_FILE -s $input
+			END=$(date +%s.%N)
+			TIME_PAR=$(python3 -c "print('{:.2f}'.format(${END} - ${START}))")
+			parallel_times[$i]=$TIME_PAR
+		done
+		for ((i = 1; i <= times; i++)); do
+			parallel_time=$(python3 -c "print('{:.2f}'.format(${parallel_time} + ${parallel_times[$i]}))")
+		done
+
+		parallel_time=$(python3 -c "print('{:.2f}'.format(${parallel_time} / ${times}))")
+
+		echo "It took in average of $parallel_time seconds to run $input paralelly with 4 processes"
+
+		SPEEDUP=$(python3 -c "print('{:.2f}'.format(${sequential_time} / ${parallel_time}))")
 		echo "Speed up for input $input and 4 processes is $SPEEDUP"
 		echo ""
+		sequential_time=0
+		parallel_time=0
 
 	done
 }
