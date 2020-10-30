@@ -2,9 +2,9 @@
 
 PARALLEL_FILE=./par_sample_sort
 SEQUENTIAL_FILE=./seq_sample_sort
-small=16777216
-medium=33554432
-big=67108864
+small=33554432
+medium=67108864
+big=134217728
 
 run() {
 	for input in $small $medium $big; do
