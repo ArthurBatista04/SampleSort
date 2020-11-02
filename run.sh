@@ -12,7 +12,7 @@ parallel_times=()
 parallel_time=0
 
 run() {
-	for input in $small $medium ; do
+	for input in $small $medium $big ; do
 
 		echo "Running sequential algorithm with 4 partations... Input size = $input"
 		for ((i = 1; i <= times; i++)); do
